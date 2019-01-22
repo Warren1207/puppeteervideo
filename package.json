@@ -1,0 +1,22 @@
+{
+  "name": "puppeteervideo",
+  "version": "1.0.0",
+  "description": "视频爬虫",
+  "main": "main.js",
+  "scripts": {
+    "start": "node Main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "913932075_1207"
+  ],
+  "author": "Warren Lee",
+  "license": "ISC",
+  "dependencies": {
+    "q": "^1.5.1",
+    "puppeteer": "^1.11.0",
+    "nodemailer": "^5.1.1",
+    "m3u8stream": "^0.6.2",
+    "jsonfile": "^5.0.0"
+  }
+}
