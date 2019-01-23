@@ -1,36 +1,74 @@
 'use strict';
 const puppeteer = require('puppeteer');
 const Q = require('q');
-const jsonfile = require('jsonfile')
+const jsonfile = require('jsonfile');
 //const EmailSend = require('./EmailSend');
 (async () => {
-    const browser = await puppeteer.launch({headless: false,timeout: 5000,});
+    let browser = await puppeteer.launch({headless: true});
     const baseUrl = "http://www.kpd126.com";
-    const page = await browser.newPage();
+    let page = await browser.newPage();
     let resultJsonArray = [];
+    const readJson = async function(){
+        const deferred = Q.defer();
+        await jsonfile.readFile('./m3u8.json').then(res => {
+            deferred.resolve(res);
+        });
+        return deferred.promise;
+    };
+    await readJson().then(function(res){
+        resultJsonArray = res;
+    });
     const pageGo = async function(url){
         const deferred = Q.defer();
-        console.log(url);
-        try{
-            await page.goto(url);
-            deferred.resolve(page);
-        }catch (e) {
-            console.log(e.message);
-            pageGo(url)
-        }
+        console.log("page>>>>>>>"+url);
+        let openPage = false;
+        const pageTo = async function(){
+            try{
+                await page.goto(url);
+                openPage = true;
+            }catch (e) {
+                pageTo(url)
+            }
+        };
+        await pageTo();
+        const setInt = setInterval(function(){
+            if(openPage == true){
+                clearInterval(setInt);
+                deferred.resolve(page);
+            }
+        },200);
         return deferred.promise;
     };
     const pageDetailGo = async function(url){
         const deferred = Q.defer();
-        console.log(url);
+        console.log("pageDetail>>>>>>>"+url);
         const pageD = await browser.newPage();
-        try{
-            await pageD.goto(url);
-            deferred.resolve(pageD);
-        }catch (e) {
-            await pageD.close();
-            pageGo(url)
-        }
+        let openPage = false;
+        const pageTo = async function(){
+            try{
+                await pageD.goto(url);
+                await pageD.waitFor(3000);
+                openPage = true;
+            }catch (e) {
+                pageTo(url)
+            }
+        };
+        await pageTo();
+        const setInt = setInterval(function(){
+            if(openPage == true){
+                clearInterval(setInt);
+                deferred.resolve(pageD);
+            }
+        },200);
+        // try{
+        //     await pageD.goto(url);
+        //     await pageD.waitFor(3000);
+        //     deferred.resolve(pageD);
+        // }catch (e) {
+        //     console.log(e.message);
+        //     await pageD.close();
+        //     pageDetailGo(url);
+        // }
         return deferred.promise;
     };
     const readPage = function(){
@@ -60,7 +98,7 @@ const jsonfile = require('jsonfile')
             let count = 0;
             const readDetailHtml =async function(){
                 if(count< videoList.length){
-                    console.log(count);
+                    console.log(count+ ">>>>>>>>>>>>>>>>>>>>>" + videoList.length);
                   const videoDetail = videoList[count];
                   pageDetailGo("http://www.kpd126.com"+videoDetail.href).then(async function(pageDetail){
                       const iframeSrc = await pageDetail.$eval('iframe', iframe => {
@@ -68,9 +106,24 @@ const jsonfile = require('jsonfile')
                       });
                       await pageDetail.close();
                       pageDetailGo("http://www.kpd126.com"+iframeSrc).then(async function(pageVideo){
-                          const m3u8Src = await pageVideo.$eval('video', video => {
-                              return video.getAttribute('src');
-                          });
+                          let videoPd = null;
+                          try{
+                              videoPd = await pageVideo.$('video');
+                          }catch (e) {
+                              videoPd = null;
+                          }
+                          let m3u8Src = null;
+                          if(videoPd){
+                              m3u8Src = await pageVideo.$eval('video', video => {
+                                  console.log(video);
+                                  if(!video){
+                                      return null;
+                                  }
+                                  return video.getAttribute('src');
+                              });
+                          }else{
+                              console.log("会员页面："+pageVideo.url())
+                          }
                           await pageVideo.close();
                           videoList[count].m3u8Src = m3u8Src;
                           count ++ ;
@@ -90,7 +143,9 @@ const jsonfile = require('jsonfile')
                         const link = await page.$eval('.pagination li a[title="下一页"]', adom => {
                             return adom.getAttribute('href');
                         });
-
+                        // await browser.close();
+                        // browser = await puppeteer.launch({headless: true});
+                        // page = await browser.newPage();
                         pageGo("http://www.kpd126.com"+link).then(readHtml);
                     }
                 }
@@ -98,7 +153,7 @@ const jsonfile = require('jsonfile')
             readDetailHtml();
         };
         if(page.url() == "about:blank"){
-            pageGo("http://www.kpd126.com"+'/whmm/index.html').then(readHtml);
+            pageGo("http://www.kpd126.com"+'/whmm/index_49.html').then(readHtml);
         }
     }
     readPage();
