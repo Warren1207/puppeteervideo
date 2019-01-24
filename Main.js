@@ -153,7 +153,7 @@ const jsonfile = require('jsonfile');
             readDetailHtml();
         };
         if(page.url() == "about:blank"){
-            pageGo("http://www.kpd126.com"+'/whmm/index_49.html').then(readHtml);
+            pageGo("http://www.kpd126.com"+'/whmm/index_69.html').then(readHtml);
         }
     }
     readPage();
